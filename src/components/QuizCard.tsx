@@ -10,7 +10,8 @@ import {
   Filter, 
   Lightbulb, 
   LayoutGrid,
-  Info
+  Info,
+  RefreshCw
 } from "lucide-react";
 
 interface QuizCardProps {
@@ -38,10 +39,74 @@ export const QuizCard: React.FC<QuizCardProps> = ({
   const [showJumpGrid, setShowJumpGrid] = useState(false);
   const quizCardRef = useRef<HTMLDivElement>(null);
 
-  // Sync index if parent changes initialIndex
+  // Shuffle utility
+  const shuffleArray = (array: Question[]) => {
+    const arr = [...array];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  };
+
+  const [isShuffle, setIsShuffle] = useState(() => {
+    return localStorage.getItem("c_quiz_shuffle_mode") === "true";
+  });
+
+  const [shuffledQuestions, setShuffledQuestions] = useState<Question[]>(() => {
+    const isShuf = localStorage.getItem("c_quiz_shuffle_mode") === "true";
+    return isShuf ? shuffleArray(questions) : [];
+  });
+
+  const handleToggleShuffle = () => {
+    if (!isShuffle) {
+      const newShuffled = shuffleArray(questions);
+      setShuffledQuestions(newShuffled);
+      setIsShuffle(true);
+      localStorage.setItem("c_quiz_shuffle_mode", "true");
+      setCurrentIndex(0);
+    } else {
+      const currentQ = filteredQuestions[currentIndex];
+      setIsShuffle(false);
+      localStorage.setItem("c_quiz_shuffle_mode", "false");
+      if (currentQ) {
+        const originalIdx = questions.findIndex(q => q.id === currentQ.id);
+        if (originalIdx !== -1) {
+          setCurrentIndex(originalIdx);
+        }
+      }
+    }
+  };
+
+  const handleReshuffle = () => {
+    const newShuffled = shuffleArray(questions);
+    setShuffledQuestions(newShuffled);
+    setCurrentIndex(0);
+  };
+
+  // Sync index if parent changes initialIndex (only when not in shuffle mode to avoid breaking flow)
   useEffect(() => {
-    setCurrentIndex(initialIndex);
-  }, [initialIndex]);
+    if (!isShuffle) {
+      setCurrentIndex(initialIndex);
+    }
+  }, [initialIndex, isShuffle]);
+
+  // Base deck selection
+  const baseQuestions = useMemo(() => {
+    return isShuffle ? shuffledQuestions : questions;
+  }, [isShuffle, shuffledQuestions, questions]);
+
+  // Search filter
+  const filteredQuestions = useMemo(() => {
+    if (!searchQuery.trim()) return baseQuestions;
+    const normQuery = searchQuery.toLowerCase();
+    return baseQuestions.filter(q => 
+      q.q.toLowerCase().includes(normQuery) || 
+      q.cat.toLowerCase().includes(normQuery) ||
+      `q${q.id}`.includes(normQuery) ||
+      q.o.some(opt => opt.toLowerCase().includes(normQuery))
+    );
+  }, [baseQuestions, searchQuery]);
 
   // Keep track of explanation state
   useEffect(() => {
@@ -52,19 +117,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({
     } else {
       setShowExplanation(false);
     }
-  }, [currentIndex, answered, searchQuery]);
-
-  // Search filter
-  const filteredQuestions = useMemo(() => {
-    if (!searchQuery.trim()) return questions;
-    const normQuery = searchQuery.toLowerCase();
-    return questions.filter(q => 
-      q.q.toLowerCase().includes(normQuery) || 
-      q.cat.toLowerCase().includes(normQuery) ||
-      `q${q.id}`.includes(normQuery) ||
-      q.o.some(opt => opt.toLowerCase().includes(normQuery))
-    );
-  }, [questions, searchQuery]);
+  }, [currentIndex, answered, searchQuery, filteredQuestions]);
 
   // Fallback if current index exceeds filtered list
   useEffect(() => {
@@ -167,6 +220,53 @@ export const QuizCard: React.FC<QuizCardProps> = ({
             <span>找到: <strong className="text-slate-700 font-semibold">{filteredQuestions.length}</strong> 道</span>
             <span>筛选中</span>
           </div>
+        </div>
+
+        {/* Practice Mode Configuration Widget */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-semibold tracking-wider uppercase text-slate-400 font-mono">刷题模式控制</span>
+            <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${isShuffle ? 'bg-amber-50 text-amber-600 border border-amber-200/50' : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
+              {isShuffle ? "乱序刷题中" : "顺序刷题中"}
+            </span>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-1 bg-slate-50 p-1 rounded-xl">
+            <button
+              onClick={() => {
+                if (isShuffle) handleToggleShuffle();
+              }}
+              className={`py-1.5 px-2 text-center rounded-lg text-xs font-semibold cursor-pointer transition-all ${
+                !isShuffle 
+                  ? "bg-white text-blue-600 shadow-xs" 
+                  : "text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              顺序
+            </button>
+            <button
+              onClick={() => {
+                if (!isShuffle) handleToggleShuffle();
+              }}
+              className={`py-1.5 px-2 text-center rounded-lg text-xs font-semibold cursor-pointer transition-all ${
+                isShuffle 
+                  ? "bg-white text-amber-600 shadow-xs" 
+                  : "text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              乱序
+            </button>
+          </div>
+
+          {isShuffle && (
+            <button
+              onClick={handleReshuffle}
+              className="w-full py-2 px-3 bg-amber-50/60 hover:bg-amber-50 text-amber-700 text-[11px] font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer border border-amber-200/40"
+            >
+              <RefreshCw className="w-3.5 h-3.5 animate-spin-slow" />
+              <span>重新洗牌 (打乱顺序)</span>
+            </button>
+          )}
         </div>
 
         {/* Quick actions & category info */}
