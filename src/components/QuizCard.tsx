@@ -14,6 +14,10 @@ import {
   RefreshCw
 } from "lucide-react";
 
+interface ExtendedQuestion extends Question {
+  optMap?: number[];
+}
+
 interface QuizCardProps {
   questions: Question[];
   answered: Record<number, string>;
@@ -39,14 +43,38 @@ export const QuizCard: React.FC<QuizCardProps> = ({
   const [showJumpGrid, setShowJumpGrid] = useState(false);
   const quizCardRef = useRef<HTMLDivElement>(null);
 
-  // Shuffle utility
-  const shuffleArray = (array: Question[]) => {
+  // Shuffle questions AND their option keys
+  const shuffleQuestionsAndOptions = (array: Question[]): Question[] => {
     const arr = [...array];
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [arr[i], arr[j]] = [arr[j], arr[i]];
     }
-    return arr;
+
+    return arr.map(q => {
+      const originalO = [...q.o];
+      const indices = [0, 1, 2, 3];
+      
+      // Shuffle option indices
+      for (let i = indices.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [indices[i], indices[j]] = [indices[j], indices[i]];
+      }
+
+      const shuffledO = indices.map(idx => originalO[idx]);
+
+      // Map original correct letter to new index
+      const originalCorrectIdx = ["A", "B", "C", "D"].indexOf(q.a);
+      const newCorrectIdx = indices.indexOf(originalCorrectIdx);
+      const newCorrectLetter = ["A", "B", "C", "D"][newCorrectIdx] as "A" | "B" | "C" | "D";
+
+      return {
+        ...q,
+        o: shuffledO,
+        a: newCorrectLetter,
+        optMap: indices
+      } as ExtendedQuestion;
+    });
   };
 
   const [isShuffle, setIsShuffle] = useState(() => {
@@ -55,20 +83,33 @@ export const QuizCard: React.FC<QuizCardProps> = ({
 
   const [shuffledQuestions, setShuffledQuestions] = useState<Question[]>(() => {
     const isShuf = localStorage.getItem("c_quiz_shuffle_mode") === "true";
-    return isShuf ? shuffleArray(questions) : [];
+    if (!isShuf) return [];
+    try {
+      const stored = localStorage.getItem("c_quiz_shuffled_questions");
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (e) {
+      console.error("Failed to parse stored shuffled questions:", e);
+    }
+    const fresh = shuffleQuestionsAndOptions(questions);
+    localStorage.setItem("c_quiz_shuffled_questions", JSON.stringify(fresh));
+    return fresh;
   });
 
   const handleToggleShuffle = () => {
     if (!isShuffle) {
-      const newShuffled = shuffleArray(questions);
+      const newShuffled = shuffleQuestionsAndOptions(questions);
       setShuffledQuestions(newShuffled);
       setIsShuffle(true);
       localStorage.setItem("c_quiz_shuffle_mode", "true");
+      localStorage.setItem("c_quiz_shuffled_questions", JSON.stringify(newShuffled));
       setCurrentIndex(0);
     } else {
       const currentQ = filteredQuestions[currentIndex];
       setIsShuffle(false);
       localStorage.setItem("c_quiz_shuffle_mode", "false");
+      localStorage.removeItem("c_quiz_shuffled_questions");
       if (currentQ) {
         const originalIdx = questions.findIndex(q => q.id === currentQ.id);
         if (originalIdx !== -1) {
@@ -79,8 +120,9 @@ export const QuizCard: React.FC<QuizCardProps> = ({
   };
 
   const handleReshuffle = () => {
-    const newShuffled = shuffleArray(questions);
+    const newShuffled = shuffleQuestionsAndOptions(questions);
     setShuffledQuestions(newShuffled);
+    localStorage.setItem("c_quiz_shuffled_questions", JSON.stringify(newShuffled));
     setCurrentIndex(0);
   };
 
@@ -128,6 +170,31 @@ export const QuizCard: React.FC<QuizCardProps> = ({
 
   const currentQuestion = filteredQuestions[currentIndex];
 
+  // Map parent stored selection letter to visual layout
+  const userSelectionObj = useMemo(() => {
+    if (!currentQuestion) return { isSelected: (optKey: string) => false, userSelectionLetter: undefined };
+    const savedOriginalChoice = answered[currentQuestion.id];
+    if (savedOriginalChoice === undefined) {
+      return { isSelected: (optKey: string) => false, userSelectionLetter: undefined };
+    }
+
+    if (isShuffle && (currentQuestion as ExtendedQuestion).optMap) {
+      const optMap = (currentQuestion as ExtendedQuestion).optMap!;
+      const originalSelectedIdx = ["A", "B", "C", "D"].indexOf(savedOriginalChoice);
+      const shuffledSelectedIdx = optMap.indexOf(originalSelectedIdx);
+      const shuffledSelectedLetter = ["A", "B", "C", "D"][shuffledSelectedIdx];
+      return {
+        isSelected: (optKey: string) => optKey === shuffledSelectedLetter,
+        userSelectionLetter: shuffledSelectedLetter
+      };
+    } else {
+      return {
+        isSelected: (optKey: string) => optKey === savedOriginalChoice,
+        userSelectionLetter: savedOriginalChoice
+      };
+    }
+  }, [currentQuestion, answered, isShuffle]);
+
   const handleOptionSelect = (optionChar: "A" | "B" | "C" | "D") => {
     if (!currentQuestion) return;
     
@@ -135,7 +202,16 @@ export const QuizCard: React.FC<QuizCardProps> = ({
     if (answered[currentQuestion.id] !== undefined) return;
 
     const isCorrect = optionChar === currentQuestion.a;
-    onAnswer(currentQuestion.id, optionChar, isCorrect);
+
+    // Map selection character back to its original layout value for stable scoring
+    let originalChoiceLetter = optionChar;
+    if (isShuffle && (currentQuestion as ExtendedQuestion).optMap) {
+      const clickedIdx = ["A", "B", "C", "D"].indexOf(optionChar);
+      const originalIdx = (currentQuestion as ExtendedQuestion).optMap![clickedIdx];
+      originalChoiceLetter = ["A", "B", "C", "D"][originalIdx] as "A" | "B" | "C" | "D";
+    }
+
+    onAnswer(currentQuestion.id, originalChoiceLetter, isCorrect);
     setShowExplanation(true);
   };
 
@@ -170,7 +246,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [currentIndex, filteredQuestions, answered]);
+  }, [currentIndex, filteredQuestions, answered, isShuffle]);
 
   if (!currentQuestion) {
     return (
@@ -413,7 +489,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({
               {["A", "B", "C", "D"].map((optKey, idx) => {
                 const optText = currentQuestion.o[idx];
                 const cleanOptText = optText ? optText.replace(/^[A-D]、\s*/, "") : "";
-                const isSelected = userSelection === optKey;
+                const isSelected = userSelectionObj.isSelected(optKey);
                 const isCorrectAns = currentQuestion.a === optKey;
                 const isAnswered = userSelection !== undefined;
 
@@ -508,7 +584,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({
                 <div className="text-xs text-slate-600 leading-relaxed font-sans">
                   {isAnswered ? (
                     <p>
-                      您的判选是 <strong className={`font-semibold ${isUserCorrect ? 'text-emerald-600' : 'text-rose-600'}`}>{userSelection}</strong>，
+                      您的判选是 <strong className={`font-semibold ${isUserCorrect ? 'text-emerald-600' : 'text-rose-600'}`}>{userSelectionObj.userSelectionLetter}</strong>，
                       此题的正确答案是 <strong className="text-emerald-600 font-semibold">{currentQuestion.a}</strong>。
                       {isUserCorrect ? " 正确！不费吹灰之力，干得漂亮！" : " 别气馁，研读下方解析即可秒懂底层规律！"}
                     </p>

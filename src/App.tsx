@@ -23,7 +23,9 @@ import {
   Sun,
   Star,
   RefreshCw,
-  Info
+  Info,
+  ZoomIn,
+  ZoomOut
 } from "lucide-react";
 
 export default function App() {
@@ -39,6 +41,30 @@ export default function App() {
 
   // Initial jump indexes inside practice deck
   const [initialQuizIndex, setInitialQuizIndex] = useState(0);
+
+  // Global window scale / zoom states
+  const [zoomLevel, setZoomLevel] = useState<number>(() => {
+    const stored = localStorage.getItem("c_quiz_zoom_level");
+    if (stored) {
+      const val = parseFloat(stored);
+      if (!isNaN(val) && val >= 0.7 && val <= 1.5) {
+        return val;
+      }
+    }
+    return 1.0;
+  });
+
+  // Sync zoom level preference
+  useEffect(() => {
+    localStorage.setItem("c_quiz_zoom_level", zoomLevel.toString());
+  }, [zoomLevel]);
+
+  const handleZoomChange = (delta: number) => {
+    setZoomLevel(prev => {
+      const val = Math.round((prev + delta) * 100) / 100;
+      return Math.min(1.5, Math.max(0.7, val));
+    });
+  };
 
   // Sync practice configurations back to local storage
   useEffect(() => {
@@ -149,7 +175,7 @@ export default function App() {
   };
 
   return (
-    <div id="application_root" className="min-h-screen bg-slate-50/50 flex flex-col justify-between selection:bg-blue-100 selection:text-blue-800">
+    <div id="application_root" className="min-h-screen bg-slate-50/50 flex flex-col justify-between selection:bg-blue-100 selection:text-blue-800" style={{ zoom: zoomLevel }}>
       
       {/* Visual background gradient blur accents */}
       <div className="absolute top-0 left-0 right-0 h-96 bg-gradient-to-b from-blue-50/50 to-transparent -z-10 pointer-events-none" />
@@ -163,7 +189,7 @@ export default function App() {
           {/* Subtle decoration spot */}
           <div className="absolute -right-16 -top-16 w-36 h-36 bg-blue-100/30 rounded-full blur-2xl pointer-events-none" />
 
-          <div className="space-y-2 text-center md:text-left">
+          <div className="space-y-2 text-center md:text-left flex-1">
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-2.5">
               <h1 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight font-display select-none">
                 C语言二级考试通关大进阶
@@ -173,11 +199,47 @@ export default function App() {
               </span>
             </div>
             <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
-              全面精细收录 <strong>251道高频官方考核原题</strong>。提供多维度能力大屏、顺序智能刷题、全真模拟实试倒计时、历史战绩跟踪与支持消灭核销的“错题笔记本”硬核辅助系统，为您考试保驾护航！
+              全面精细收录 <strong>251道高频官方考核原题</strong>。提供多维度能力大屏、顺序智能刷题、全真模拟实试倒计时、历史战绩跟踪与支持消灭核销的“错题笔记本”硬核辅助系统，为您考试保怀护航！
             </p>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex flex-col sm:flex-row items-center gap-6 shrink-0">
+            {/* Window Scale Zoom Controls */}
+            <div className="flex items-center gap-2 bg-slate-50/80 border border-slate-150 p-2 rounded-2xl shadow-xs">
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider font-mono">
+                视口缩放
+              </span>
+              <div className="flex items-center gap-1.5 bg-white border border-slate-150 pl-2 pr-1 py-1 rounded-xl">
+                <span className="text-xs font-bold text-slate-600 font-mono min-w-[36px] text-center">
+                  {Math.round(zoomLevel * 100)}%
+                </span>
+                <button
+                  onClick={() => handleZoomChange(-0.1)}
+                  disabled={zoomLevel <= 0.7}
+                  className="w-5.5 h-5.5 flex items-center justify-center bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg border border-slate-150 transition-all cursor-pointer"
+                  title="缩小"
+                >
+                  <ZoomOut className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => handleZoomChange(0.1)}
+                  disabled={zoomLevel >= 1.5}
+                  className="w-5.5 h-5.5 flex items-center justify-center bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg border border-slate-150 transition-all cursor-pointer"
+                  title="放大"
+                >
+                  <ZoomIn className="w-3.5 h-3.5" />
+                </button>
+                {zoomLevel !== 1.0 && (
+                  <button
+                    onClick={() => setZoomLevel(1.0)}
+                    className="text-[10px] text-blue-600 hover:text-blue-700 font-semibold px-1.5 hover:bg-blue-50/50 py-0.5 rounded-md transition-colors"
+                  >
+                    重置
+                  </button>
+                )}
+              </div>
+            </div>
+
             {/* Short current accuracy banner */}
             <div className="text-right hidden sm:block space-y-0.5">
               <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-medium">全局累计完成率</span>
