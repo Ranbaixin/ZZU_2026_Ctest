@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Question, allQuestions, categories } from "../data/questions";
 import { PracticeState } from "../utils/quizHelpers";
 import { 
@@ -9,7 +9,8 @@ import {
   BarChart2, 
   RotateCcw,
   BookMarked,
-  Award
+  Award,
+  AlertTriangle
 } from "lucide-react";
 
 interface StatsSectionProps {
@@ -30,6 +31,7 @@ export const StatsSection: React.FC<StatsSectionProps> = ({
   onNavigateToPractice,
 }) => {
   const { answered, correct, bookmarked } = state;
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Stat computations
   const totalQuestions = allQuestions.length;
@@ -233,7 +235,7 @@ export const StatsSection: React.FC<StatsSectionProps> = ({
               <p className="text-xs text-slate-400 px-3 select-none leading-relaxed">
                 {answeredCount === 0 ? "点击下方按钮开始顺序练习，我们将对您的答题行为进行深度能力肖像挖掘！" :
                  currentAccuracy >= 85 ? "您的代码功底相当出众，对指针算术、多维维数组等各种复杂结构了如指掌！" :
-                 currentAccuracy >= 70 ? "您已具备二级考试及格线实力。查缺补漏多刷弱项分类即可完美冲击优秀！" :
+                 currentAccuracy >= 70 ? "您已具备郑大2026年C语言考试及格实力。查缺补漏多刷弱项分类即可完美冲击优秀！" :
                  currentAccuracy >= 50 ? "多练习控制和指针方面的经典案例，在错题本中重试和研读其深度解析。" : 
                  "建议参考代码解析，弄懂每道题在底层中各变量的干裂自变过程再做复习。"}
               </p>
@@ -251,11 +253,7 @@ export const StatsSection: React.FC<StatsSectionProps> = ({
             </button>
             <button
               id="reset_entire_btn"
-              onClick={() => {
-                if(confirm("确定要清空全部的刷题进度、统计数据与历史错题吗？该动作不可撤销。")) {
-                  onReset();
-                }
-              }}
+              onClick={() => setShowResetConfirm(true)}
               className="w-full py-2 bg-slate-50 hover:bg-rose-50 hover:text-rose-600 text-slate-400 font-medium text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -263,6 +261,44 @@ export const StatsSection: React.FC<StatsSectionProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Custom reset confirmation modal overlay */}
+        {showResetConfirm && (
+          <div id="reset_confirm_modal_backdrop" className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 animate-fade-in">
+            <div id="reset_confirm_modal_box" className="bg-white rounded-3xl border border-slate-100 shadow-xl max-w-sm w-full p-6 space-y-4 animate-scale-up">
+              <div className="flex items-center gap-3 text-rose-600">
+                <div className="p-2.5 bg-rose-50 rounded-xl">
+                  <AlertTriangle className="w-5 h-5 animate-pulse" />
+                </div>
+                <h3 className="text-base font-bold font-display text-slate-800">确认清空记录？</h3>
+              </div>
+              
+              <p className="text-xs text-slate-500 leading-relaxed">
+                确定要清空全部的刷题进度、统计数据与智能能力诊断吗？该动作不可撤销，且会重置已解答和错题笔记本的全部信息。
+              </p>
+
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  id="cancel_reset_btn"
+                  onClick={() => setShowResetConfirm(false)}
+                  className="flex-1 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 font-semibold text-xs rounded-xl transition-all cursor-pointer text-center border border-slate-200"
+                >
+                  取消
+                </button>
+                <button
+                  id="confirm_reset_btn"
+                  onClick={() => {
+                    setShowResetConfirm(false);
+                    onReset();
+                  }}
+                  className="flex-1 py-2 bg-rose-500 hover:bg-rose-600 text-white font-semibold text-xs rounded-xl transition-all cursor-pointer text-center shadow-xs"
+                >
+                  确认清空
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Category breakdown Bento grids */}
         <div id="category_breakdown_card" className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xs lg:col-span-2 space-y-4">

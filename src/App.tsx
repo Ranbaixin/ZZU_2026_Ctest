@@ -145,6 +145,23 @@ export default function App() {
 
   // Resets full localized client database
   const handleFullReset = () => {
+    // Clear all localStorage keys
+    localStorage.removeItem("c_quiz_state_v1");
+    localStorage.removeItem("c_quiz_history_v1");
+    localStorage.removeItem("c_quiz_shuffle_mode");
+    localStorage.removeItem("c_quiz_shuffled_questions");
+
+    // Nullify / Reset local React state values immediately to bypass unload flash race
+    setPracticeState({
+      answered: {},
+      correct: {},
+      bookmarked: {},
+      wrongList: []
+    });
+    setExamHistory([]);
+    setInitialQuizIndex(0);
+
+    // Run helper to attempt fallback win-reload
     clearAllData();
   };
 
@@ -192,14 +209,14 @@ export default function App() {
           <div className="space-y-2 text-center md:text-left flex-1">
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-2.5">
               <h1 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight font-display select-none">
-                C语言二级考试通关大进阶
+                郑州大学2026年C语言考试测试
               </h1>
               <span className="px-2 py-0.5 bg-blue-600 text-white text-[10px] font-bold uppercase tracking-wider rounded-md">
-                v2026.05 官方真题库
+                郑大专属 2026版
               </span>
             </div>
             <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
-              全面精细收录 <strong>251道高频官方考核原题</strong>。提供多维度能力大屏、顺序智能刷题、全真模拟实试倒计时、历史战绩跟踪与支持消灭核销的“错题笔记本”硬核辅助系统，为您考试保怀护航！
+              全面收录 <strong>251道官方高频核心考核题目</strong>。提供多维度能力分析大屏、顺序智能刷题、全真模拟考场倒计时、历史战绩跟踪与支持消灭核销的“错题笔记本”系统，为您的通关之路保驾护航！
             </p>
           </div>
 
@@ -361,11 +378,11 @@ export default function App() {
       {/* Decorative footer */}
       <footer id="app_credits_footer" className="bg-white border-t border-slate-150 py-6 text-center text-[11px] text-slate-400 font-sans tracking-wide">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>© 2026 C语言二级官方考试强化版. 本地高速 localStorage 沙箱存储保护中.</p>
+          <p>© 2026 郑州大学C语言考试模考测试系统. 本地高速 localStorage 沙箱存储保护中.</p>
           <div className="flex items-center gap-4 select-none">
             <span className="flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>真题覆盖: 100% (251题全套)</span>
+              <span>专项真题覆盖: 100% (251题全套)</span>
             </span>
           </div>
         </div>

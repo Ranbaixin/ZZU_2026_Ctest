@@ -1,6 +1,6 @@
 {
-  "name": "C语言二级答题系统",
-  "description": "提供251道C语言二级真题，支持智能阅卷、错题本核销与模拟考试等辅导功能。",
+  "name": "郑州大学2026年C语言考试测试",
+  "description": "提供251道郑州大学C语言考试真题，支持智能阅卷、错题本核销、视口比例调节与随机乱序练习等辅导功能。",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -33,6 +33,7 @@ export const MockExam: React.FC<MockExamProps> = ({
   const [timeLeft, setTimeLeft] = useState(1800); // 30 minutes in seconds
   const [examFinished, setExamFinished] = useState(false);
   const [finalRecord, setFinalRecord] = useState<ExamHistoryRecord | null>(null);
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
 
   // Stats
   const answeredCount = Object.keys(answers).length;
@@ -126,7 +127,7 @@ export const MockExam: React.FC<MockExamProps> = ({
                 <Compass className="w-6 h-6" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-xl font-bold text-slate-800 font-display">C语言二级考点模拟实考</h3>
+                <h3 className="text-xl font-bold text-slate-800 font-display">郑州大学2026年C语言考试模拟测试</h3>
                 <p className="text-slate-500 text-xs leading-relaxed max-w-xl">
                   模拟实考系统将以全真标准，在海量251大题库内按章节比率全智能抽取 <strong>30道经典题目</strong> 组装成模拟考试卷。试卷包含运算符、双维组合数组、行级指针、标准外置文件命令等多维难关、限时 <strong>30分钟</strong> 完成。
                 </p>
@@ -483,21 +484,55 @@ export const MockExam: React.FC<MockExamProps> = ({
 
               <div className="pt-4 border-t border-slate-100">
                 <button
-                  onClick={() => {
-                    const unans = examQuestions.length - answeredCount;
-                    const confirmMsg = unans > 0 
-                      ? `您还有 ${unans} 道题目没有作答。确定现在就要提前收卷交盘并评分吗？`
-                      : "确定好所有作答并立即交卷计分吗？";
-                    if (confirm(confirmMsg)) {
-                      handleFinishExam();
-                    }
-                  }}
+                  onClick={() => setShowSubmitConfirm(true)}
                   className="w-full py-3 bg-red-500 hover:bg-red-600 text-white font-bold text-xs rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <CheckCircle2 className="w-4 h-4 text-white" />
                   <span>立即交卷计分并出局</span>
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom submit exam confirmation modal overlay */}
+      {showSubmitConfirm && (
+        <div id="submit_confirm_modal_backdrop" className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 animate-fade-in animate-duration-200">
+          <div id="submit_confirm_modal_box" className="bg-white rounded-3xl border border-slate-100 shadow-xl max-w-sm w-full p-6 space-y-4 animate-scale-up">
+            <div className="flex items-center gap-3 text-amber-500">
+              <div className="p-2.5 bg-amber-50 rounded-xl">
+                <AlertCircle className="w-5 h-5 animate-pulse" />
+              </div>
+              <h3 className="text-base font-bold font-display text-slate-800">确认提前收卷？</h3>
+            </div>
+            
+            <p className="text-xs text-slate-500 leading-relaxed">
+              {examQuestions.length - answeredCount > 0 ? (
+                <span>您还有 <strong className="text-amber-600 font-semibold">{examQuestions.length - answeredCount}</strong> 道题目未作答。确定现在提前交卷评分吗？</span>
+              ) : (
+                <span>确定已完成所有作答并立即交卷计分吗？提交后将无法修改。</span>
+              )}
+            </p>
+
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                id="cancel_submit_btn"
+                onClick={() => setShowSubmitConfirm(false)}
+                className="flex-1 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 font-semibold text-xs rounded-xl transition-all cursor-pointer text-center border border-slate-200"
+              >
+                继续作答
+              </button>
+              <button
+                id="confirm_submit_btn"
+                onClick={() => {
+                  setShowSubmitConfirm(false);
+                  handleFinishExam();
+                }}
+                className="flex-1 py-2 bg-rose-500 hover:bg-rose-600 text-white font-semibold text-xs rounded-xl transition-all cursor-pointer text-center shadow-xs"
+              >
+                确认交卷
+              </button>
             </div>
           </div>
         </div>

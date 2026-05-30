@@ -9,7 +9,8 @@ import {
   XCircle, 
   Lightbulb, 
   Bookmark,
-  CheckSquare
+  CheckSquare,
+  AlertTriangle
 } from "lucide-react";
 
 interface WrongBookProps {
@@ -31,6 +32,7 @@ export const WrongBook: React.FC<WrongBookProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   
   // Track individual interactive re-attempts on wrong questions
   // questionId -> temporary selected choice ('A'|'B'|'C'|'D')
@@ -91,12 +93,7 @@ export const WrongBook: React.FC<WrongBookProps> = ({
 
         {wrongQuestions.length > 0 && (
           <button
-            onClick={() => {
-              if (confirm("确定要全部清空您的错题本吗？此举会清除所有标记错误状态。")) {
-                onClearWrongs();
-                setRetryAnswers({});
-              }
-            }}
+            onClick={() => setShowClearConfirm(true)}
             className="shrink-0 py-2 px-4 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center gap-2"
           >
             <RotateCcw className="w-4 h-4" />
@@ -104,6 +101,45 @@ export const WrongBook: React.FC<WrongBookProps> = ({
           </button>
         )}
       </div>
+
+      {/* Custom clear wrongs confirmation modal overlay */}
+      {showClearConfirm && (
+        <div id="clear_wrongs_confirm_modal_backdrop" className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 animate-fade-in animate-duration-200">
+          <div id="clear_wrongs_confirm_modal_box" className="bg-white rounded-3xl border border-slate-100 shadow-xl max-w-sm w-full p-6 space-y-4 animate-scale-up">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="p-2.5 bg-rose-50 rounded-xl">
+                <AlertTriangle className="w-5 h-5 animate-pulse" />
+              </div>
+              <h3 className="text-base font-bold font-display text-slate-800">确认清空错题本？</h3>
+            </div>
+            
+            <p className="text-xs text-slate-500 leading-relaxed">
+              确定要清空错题本中的所有记录吗？此举会移除错题本中目前归集的所有题目，并复位作答状态。
+            </p>
+
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                id="cancel_clear_btn"
+                onClick={() => setShowClearConfirm(false)}
+                className="flex-1 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 font-semibold text-xs rounded-xl transition-all cursor-pointer text-center border border-slate-200"
+              >
+                取消
+              </button>
+              <button
+                id="confirm_clear_btn"
+                onClick={() => {
+                  setShowClearConfirm(false);
+                  onClearWrongs();
+                  setRetryAnswers({});
+                }}
+                className="flex-1 py-2 bg-rose-500 hover:bg-rose-600 text-white font-semibold text-xs rounded-xl transition-all cursor-pointer text-center shadow-xs"
+              >
+                确认清空
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {wrongQuestions.length === 0 ? (
         <div id="empty_wrong_book" className="bg-white rounded-3xl p-16 text-center border border-slate-100 max-w-xl mx-auto space-y-4 shadow-xs">

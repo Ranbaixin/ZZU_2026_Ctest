@@ -83,7 +83,13 @@ export const clearAllData = () => {
   try {
     localStorage.removeItem(STATE_KEY);
     localStorage.removeItem(HISTORY_KEY);
-    window.location.reload();
+    localStorage.removeItem("c_quiz_shuffle_mode");
+    localStorage.removeItem("c_quiz_shuffled_questions");
+    try {
+      window.location.reload();
+    } catch (e) {
+      console.warn("Reload not allowed in container iframe, continuing state reset", e);
+    }
   } catch (e) {
     console.error("Failed to clear data", e);
   }
